@@ -589,4 +589,353 @@
                     };
                 </script>
                 <script type="text/javascript" src="https://www.highperformanceformat.com/62d328054d2f80fa55a4c7d88f3a64c4/invoke.js"></script>
-            </d
+            </div>
+        </div>
+
+    </div>
+
+    <div class="nexacore-footer">
+        <div style="margin-bottom:8px; font-weight:bold;">Powered by NEXACORE</div>
+        <div class="footer-links">
+            <span onclick="openModal('privacy')">Privacy</span>
+            <span onclick="openModal('terms')">Terms</span>
+            <span onclick="openModal('about')">About</span>
+        </div>
+    </div>
+
+    <div id="historyPanel" class="history-panel">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <h3 style="margin:0; color:var(--accent);">Calculation History</h3>
+            <button onclick="clearHistory()" style="background:#ff4444; color:white; border:none; padding:8px 15px; border-radius:8px; cursor:pointer;">Clear</button>
+        </div>
+        <div id="historyList" class="history-list"></div>
+        <button onclick="toggleHistoryPanel()" style="padding:15px; margin-top:15px; background:var(--btn-bg); border:none; border-radius:12px; color:var(--fg); font-weight:bold;">CLOSE PANEL</button>
+    </div>
+
+    <div id="modal-privacy" class="modal-overlay" onclick="closeModal('privacy')">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <h3>Privacy Policy</h3>
+            <p style="opacity:0.8; line-height:1.5;">We respect your privacy. All calculations are performed locally on your device. We use third-party advertising (Adsterra) which may use cookies to serve relevant ads.</p>
+            <button onclick="closeModal('privacy')" style="width:100%; padding:12px; background:var(--accent); border:none; color:white; border-radius:10px; margin-top:15px;">Close</button>
+        </div>
+    </div>
+
+    <div id="modal-terms" class="modal-overlay" onclick="closeModal('terms')">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <h3>Terms of Use</h3>
+            <p style="opacity:0.8; line-height:1.5;">This tool is provided "as is". NEXACORE is not liable for any financial losses due to calculation errors. Please verify results before making financial decisions.</p>
+            <button onclick="closeModal('terms')" style="width:100%; padding:12px; background:var(--accent); border:none; color:white; border-radius:10px; margin-top:15px;">Close</button>
+        </div>
+    </div>
+
+    <div id="modal-about" class="modal-overlay" onclick="closeModal('about')">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <h3>About NEXACORE</h3>
+            <p style="opacity:0.8; line-height:1.5;">NEXACORE builds high-performance digital utilities for students and professionals. Version 2.0 (Jarvis Edition).</p>
+            <button onclick="closeModal('about')" style="width:100%; padding:12px; background:var(--accent); border:none; color:white; border-radius:10px; margin-top:15px;">Close</button>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. INITIALIZATION & THEME ---
+        function initApp() {
+            // Check for saved theme
+            if(localStorage.getItem('theme') === 'dark') {
+                document.body.classList.add('dark');
+            }
+            // Initialize Converter and Bill defaults
+            populateUnits(); 
+            updateBillCats();
+        }
+
+        function toggleTheme() {
+            let isDark = document.body.classList.toggle('dark');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        }
+
+        // --- 2. PAGE NAVIGATION ---
+        function switchPage(pageId) {
+            // Hide all pages
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            // Deactivate all nav items
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            
+            // Activate selected
+            document.getElementById(pageId).classList.add('active');
+            // Find the nav item that calls this function and activate it
+            const navItems = document.querySelectorAll('.nav-item');
+            if(pageId === 'calc') navItems[0].classList.add('active');
+            if(pageId === 'conv') navItems[1].classList.add('active');
+            if(pageId === 'emi') navItems[2].classList.add('active');
+            if(pageId === 'bill') navItems[3].classList.add('active');
+        }
+
+        // --- 3. CALCULATOR LOGIC ---
+        function append(val) {
+            document.getElementById('display').value += val;
+        }
+
+        function clearDisplay() {
+            document.getElementById('display').value = '';
+        }
+
+        function delChar() {
+            let current = document.getElementById('display').value;
+            document.getElementById('display').value = current.slice(0, -1);
+        }
+
+        function calculate() {
+            try {
+                let expression = document.getElementById('display').value;
+                if(!expression) return;
+                
+                // Replace symbols for JS evaluation
+                let evalString = expression.replace(/×/g, '*').replace(/÷/g, '/');
+                let result = eval(evalString);
+                
+                // Save to history before showing result
+                saveHistory(expression, result);
+                
+                document.getElementById('display').value = result;
+            } catch (e) {
+                document.getElementById('display').value = 'Error';
+            }
+        }
+
+        // --- 4. HISTORY SYSTEM ---
+        function saveHistory(expr, res) {
+            let history = JSON.parse(localStorage.getItem('calcHistory') || '[]');
+            history.unshift({ expr: expr, res: res });
+            if(history.length > 20) history.pop(); // Keep last 20
+            localStorage.setItem('calcHistory', JSON.stringify(history));
+        }
+
+        function renderHistory() {
+            let list = document.getElementById('historyList');
+            list.innerHTML = '';
+            let history = JSON.parse(localStorage.getItem('calcHistory') || '[]');
+            
+            if(history.length === 0) {
+                list.innerHTML = '<div style="text-align:center; opacity:0.5; padding:20px;">No History Available</div>';
+                return;
+            }
+
+            history.forEach(item => {
+                let div = document.createElement('div');
+                div.className = 'history-item';
+                div.innerHTML = `<span>${item.expr}</span> <span style="color:var(--accent); font-weight:bold;">= ${item.res}</span>`;
+                div.onclick = () => {
+                    document.getElementById('display').value = item.res;
+                    toggleHistoryPanel();
+                };
+                list.appendChild(div);
+            });
+        }
+
+        function toggleHistoryPanel() {
+            let panel = document.getElementById('historyPanel');
+            if(panel.classList.contains('open')) {
+                panel.classList.remove('open');
+            } else {
+                renderHistory();
+                panel.classList.add('open');
+            }
+        }
+
+        function clearHistory() {
+            localStorage.removeItem('calcHistory');
+            renderHistory();
+        }
+
+        // --- 5. UNIT CONVERTER LOGIC ---
+        // Data structure for conversions
+        const convData = {
+            length: {
+                isTemp: false,
+                units: {
+                    'Meter': 1,
+                    'Kilometer': 1000,
+                    'Centimeter': 0.01,
+                    'Feet': 0.3048,
+                    'Inch': 0.0254,
+                    'Yard': 0.9144
+                }
+            },
+            mass: {
+                isTemp: false,
+                units: {
+                    'Kilogram': 1,
+                    'Gram': 0.001,
+                    'Pound': 0.453592,
+                    'Ounce': 0.0283495
+                }
+            },
+            data: {
+                isTemp: false,
+                units: {
+                    'Megabyte (MB)': 1,
+                    'Gigabyte (GB)': 1024,
+                    'Terabyte (TB)': 1048576,
+                    'Kilobyte (KB)': 0.0009765625
+                }
+            },
+            temp: {
+                isTemp: true, // Requires special formula
+                units: ['Celsius', 'Fahrenheit', 'Kelvin']
+            }
+        };
+
+        function populateUnits() {
+            let type = document.getElementById('convType').value;
+            let fromSelect = document.getElementById('convFrom');
+            let toSelect = document.getElementById('convTo');
+            
+            // Clear existing
+            fromSelect.innerHTML = '';
+            toSelect.innerHTML = '';
+            
+            let unitsList = [];
+            
+            if (convData[type].isTemp) {
+                unitsList = convData[type].units;
+            } else {
+                unitsList = Object.keys(convData[type].units);
+            }
+
+            unitsList.forEach(u => {
+                fromSelect.add(new Option(u, u));
+                toSelect.add(new Option(u, u));
+            });
+
+            // Set default "To" to second option if available
+            if(unitsList.length > 1) toSelect.selectedIndex = 1;
+            
+            doConvert(); // Recalculate if input exists
+        }
+
+        function doConvert() {
+            let type = document.getElementById('convType').value;
+            let val = parseFloat(document.getElementById('convInput').value);
+            let fromUnit = document.getElementById('convFrom').value;
+            let toUnit = document.getElementById('convTo').value;
+            let resultField = document.getElementById('convResult');
+
+            if (isNaN(val)) {
+                resultField.value = '';
+                return;
+            }
+
+            let result;
+
+            if (type === 'temp') {
+                // Temperature logic
+                if (fromUnit === toUnit) result = val;
+                else if (fromUnit === 'Celsius' && toUnit === 'Fahrenheit') result = (val * 9/5) + 32;
+                else if (fromUnit === 'Celsius' && toUnit === 'Kelvin') result = val + 273.15;
+                else if (fromUnit === 'Fahrenheit' && toUnit === 'Celsius') result = (val - 32) * 5/9;
+                else if (fromUnit === 'Fahrenheit' && toUnit === 'Kelvin') result = ((val - 32) * 5/9) + 273.15;
+                else if (fromUnit === 'Kelvin' && toUnit === 'Celsius') result = val - 273.15;
+                else if (fromUnit === 'Kelvin' && toUnit === 'Fahrenheit') result = ((val - 273.15) * 9/5) + 32;
+            } else {
+                // Standard Factor logic: (Value * BaseOfFrom) / BaseOfTo
+                let fromFactor = convData[type].units[fromUnit];
+                let toFactor = convData[type].units[toUnit];
+                result = (val * fromFactor) / toFactor;
+            }
+
+            // Format result (max 4 decimal places, remove trailing zeros)
+            resultField.value = parseFloat(result.toFixed(4));
+        }
+
+        // --- 6. EMI CALCULATOR LOGIC ---
+        function calculateEMI() {
+            let principal = parseFloat(document.getElementById('emiP').value);
+            let annualRate = parseFloat(document.getElementById('emiR').value);
+            let years = parseFloat(document.getElementById('emiN').value);
+
+            if (!principal || !annualRate || !years) {
+                alert("Please fill all EMI fields");
+                return;
+            }
+
+            let monthlyRate = annualRate / 12 / 100;
+            let months = years * 12;
+
+            // EMI Formula: [P x R x (1+R)^N]/[(1+R)^N-1]
+            let emi = (principal * monthlyRate * Math.pow(1 + monthlyRate, months)) / (Math.pow(1 + monthlyRate, months) - 1);
+            
+            document.getElementById('emiResult').innerHTML = "₹ " + emi.toFixed(2);
+        }
+
+        // --- 7. BILL ESTIMATOR LOGIC ---
+        const billData = {
+            "India": {
+                currency: "₹",
+                cats: {
+                    "Domestic (Home)": 7.50,
+                    "Commercial (Shop)": 12.00,
+                    "Industrial": 10.50
+                }
+            },
+            "USA": {
+                currency: "$",
+                cats: {
+                    "Residential": 0.15,
+                    "Business": 0.20
+                }
+            },
+            "UK": {
+                currency: "£",
+                cats: {
+                    "Standard": 0.34,
+                    "Economy 7": 0.20
+                }
+            }
+        };
+
+        function updateBillCats() {
+            let region = document.getElementById('billRegion').value;
+            let catSelect = document.getElementById('billCat');
+            catSelect.innerHTML = '';
+            
+            for (let cat in billData[region].cats) {
+                catSelect.add(new Option(cat, cat));
+            }
+            updateBillRate();
+        }
+
+        function updateBillRate() {
+            let region = document.getElementById('billRegion').value;
+            let cat = document.getElementById('billCat').value;
+            let rate = billData[region].cats[cat];
+            document.getElementById('billRate').value = rate;
+        }
+
+        function calculateBill() {
+            let units = parseFloat(document.getElementById('billUnits').value);
+            let rate = parseFloat(document.getElementById('billRate').value);
+            let region = document.getElementById('billRegion').value;
+            
+            if (isNaN(units) || isNaN(rate)) {
+                return;
+            }
+
+            let total = units * rate;
+            let symbol = billData[region].currency;
+            
+            document.getElementById('billTotal').innerHTML = "Total: " + symbol + " " + total.toFixed(2);
+        }
+
+        // --- 8. MODAL LOGIC ---
+        function openModal(id) {
+            document.getElementById('modal-' + id).style.display = 'flex';
+        }
+
+        function closeModal(id) {
+            document.getElementById('modal-' + id).style.display = 'none';
+        }
+
+    </script>
+</body>
+</html>
+
